@@ -1,0 +1,12 @@
+{application, muc, [
+	{description, "Multi-Chat User Component"},
+	{vsn, "semver"},
+  	{registered, []},
+  	{applications, [
+		kernel,
+		stdlib,
+		ecomponent
+	]},
+	{mod, { muc_app, []}},
+	{env, []}
+]}.
