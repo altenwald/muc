@@ -2,7 +2,7 @@
 
 -export([list_rooms/1]).
 
--define(POOL, "ejabberd").
+-define(POOL, ejabberd).
 
 -define(LIST_ROOMS, 
     "SELECT name, jid "
