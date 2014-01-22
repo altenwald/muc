@@ -1,7 +1,10 @@
 -module(muc).
 -compile([warnings_as_errors]).
 
--export([process_iq/1]).
+-export([
+    process_iq/1,
+    process_presence/1
+]).
 
 -include_lib("exmpp/include/exmpp.hrl").
 -include_lib("ecomponent/include/ecomponent.hrl").
@@ -90,11 +93,33 @@ process_iq(#params{from=From, to={Room,_,_}, iq=IQ, ns=?NS_DISCO_ITEMS, type="ge
     ecomponent:send(Result, ?NS_DISCO_ITEMS, muc, false),
     ok;
 
+%% Request disco#info for get the user information:
+
+process_iq(#params{from=From, to={Room,_,Nick}, iq=IQ, ns=?NS_DISCO_INFO, type="get"}) ->
+    FromBin = exmpp_jid:bare_to_binary(exmpp_jid:make(From)),
+    lager:debug("get room [~s] user [~s] info for ~s~n", [Room, Nick, FromBin]),
+    %% TODO: should return the detailed information about the user?
+    Query = exmpp_xml:element(?NS_DISCO_ITEMS, 'query', [], []),
+    Result = exmpp_iq:result(IQ, Query),
+    ecomponent:send(Result, ?NS_DISCO_ITEMS, muc, false),
+    ok;
+
 process_iq(#params{iq=IQ}=Params) ->
     lager:error("bad-request for params: ~p~n", [Params]),
     Error = get_error('bad-request'),
     Result = exmpp_iq:error(IQ, Error),
     ecomponent:send(Result, ?NS_DISCO_ITEMS, muc, false),
+    ok.
+
+%% Create a room
+
+process_presence(#presence{from=From, type="available", to={Room,_,Nick}, xmlel=_Xmlel}) ->
+    FromBin = exmpp_jid:bare_to_binary(exmpp_jid:make(From)),
+    lager:debug("get room [~s] user [~s] info for ~s~n", [Room, Nick, FromBin]),
+    ok;
+
+process_presence(Params) ->
+    lager:error("bad-presence for params: ~p~n", [Params]),
     ok.
 
 %% --------------------------------------------------------------------------
