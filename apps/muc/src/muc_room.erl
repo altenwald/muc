@@ -1,14 +1,25 @@
 -module(muc_room).
+-compile([warnings_as_errors]).
 -behaviour(gen_server).
+
 -define(SERVER, ?MODULE).
 
 -include("muc.hrl").
+
+-record(state, {
+    jid :: exmpp_jid:jid(),
+    room_info :: room_info(),
+    users :: [room_user()]
+}).
 
 %% ------------------------------------------------------------------
 %% API Function Exports
 %% ------------------------------------------------------------------
 
--export([start_link/0]).
+-export([
+    create_room/3,
+    start_link/3
+]).
 
 %% ------------------------------------------------------------------
 %% gen_server Function Exports
@@ -21,15 +32,42 @@
 %% API Function Definitions
 %% ------------------------------------------------------------------
 
-start_link() ->
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+create_room(JID, Owner, Nick) ->
+    F = fun() ->
+        muc_room:start_link(JID, Owner, Nick)
+    end,
+    case nprocreg:get_pid(JID, F) of
+        undefined ->
+            lager:error("Cannot create the room ~s~n", [JID]),
+            undefined;
+        {ok, PID} ->
+            PID
+    end.
+
+start_link(JID, Owner, Nick) ->
+    gen_server:start_link({local, ?SERVER}, ?MODULE, [JID,Owner,Nick], []).
 
 %% ------------------------------------------------------------------
 %% gen_server Function Definitions
 %% ------------------------------------------------------------------
 
-init(Args) ->
-    {ok, Args}.
+init([JIDbin,Owner,Nick]) ->
+    JID = exmpp_jid:parse(JIDbin),
+    OwnerUser = #room_user{
+        jid = Owner,
+        affiliation = owner,
+        role = moderator,
+        nick = Nick
+    },
+    muc_db:save_room(JID),
+    muc_db:save_user(JID, OwnerUser),
+    {ok, #state{
+        jid = JID,
+        room_info = #room_info{
+            jid = JIDbin
+        },
+        users = [OwnerUser]
+    }}.
 
 handle_call(_Request, _From, State) ->
     {reply, ok, State}.

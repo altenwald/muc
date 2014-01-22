@@ -22,7 +22,7 @@
 
 -define(GET_ROOM_INFO,
     "SELECT jid, description, change_subject, subject, language, "
-           "history_size, public_occupants, owner "
+           "history_size, public_occupants "
     "FROM rooms "
     "WHERE name = $2 "
     "AND id IN ( "
@@ -53,11 +53,11 @@ list_rooms(JID) ->
 
 get_room_info(JID, Room) ->
     case pg_query(?GET_ROOM_INFO, [JID, Room]) of
-        [{RoomJID,Desc,ChSubject,Subject,Lang,Hist,PubOcc,Owner}] ->
+        [{RoomJID,Desc,ChSubject,Subject,Lang,Hist,PubOcc}] ->
             {ok, #room_info{
                 jid=RoomJID, description=Desc, change_subject=ChSubject,
                 subject=Subject, language=Lang, history_size=Hist,
-                public_occupants=PubOcc, owner=Owner
+                public_occupants=PubOcc
             }};
         [] ->
             {error, notfound};

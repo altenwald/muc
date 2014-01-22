@@ -113,10 +113,38 @@ process_iq(#params{iq=IQ}=Params) ->
 
 %% Create a room
 
-process_presence(#presence{from=From, type="available", to={Room,_,Nick}, xmlel=_Xmlel}) ->
+process_presence(#presence{from=From, type="available", to={Room,_,Nick}=To, xmlel=Xmlel}) ->
     FromBin = exmpp_jid:bare_to_binary(exmpp_jid:make(From)),
     lager:debug("get room [~s] user [~s] info for ~s~n", [Room, Nick, FromBin]),
-    ok;
+    case exmpp_xml:get_path(Xmlel, [{element, "x"}]) of
+    undefined ->
+        %% enter a room
+        case muc_db:get_room_info(FromBin, Room) of
+        {error, notfound} ->
+            %% room doesn't exist
+            lager:warning("trying to enter in a non-existent room! ~s~n", [Room]),
+            %% TODO: presence error return (see XEP-0045)
+            ok;
+        #room_info{} ->
+            %% enter in the room
+            lager:debug("user [~s] enter in the room [~s]~n", [FromBin, Room]),
+            %% TODO: enter in the room.
+            ok
+        end;
+    #xmlel{ns = ?NS_MUC} ->
+        %% create a room
+        case muc_db:get_room_info(FromBin, Room) of
+        {error, notfound} ->
+            %% creating the room
+            RoomJID = exmpp_jid:bare_to_binary(exmpp_jid:make(To)),
+            muc_room:create_room(RoomJID, FromBin, Nick),
+            ok;
+        #room_info{} ->
+            %% room cannot be created
+            %% TODO: send the error
+            ok
+        end
+    end;
 
 process_presence(Params) ->
     lager:error("bad-presence for params: ~p~n", [Params]),
