@@ -136,11 +136,13 @@ process_presence(#presence{from=From, type="available", to={Room,_,Nick}=To, xml
         case muc_db:get_room_info(FromBin, Room) of
         {error, notfound} ->
             %% creating the room
+            lager:info("creating room ~s~n", [Room]),
             RoomJID = exmpp_jid:bare_to_binary(exmpp_jid:make(To)),
             muc_room:create_room(RoomJID, FromBin, Nick),
             ok;
-        #room_info{} ->
+        {ok, #room_info{}} ->
             %% room cannot be created
+            lager:debug("room ~s exists!~n", [Room]),
             %% TODO: send the error
             ok
         end
