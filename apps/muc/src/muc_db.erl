@@ -5,7 +5,9 @@
     list_rooms/1,
     get_room_info/2,
     get_occupants_number/2,
-    get_occupants/2
+    get_occupants/2,
+    save_room/1,
+    save_user/2
 ]).
 
 -define(POOL, ejabberd).
@@ -87,6 +89,21 @@ get_occupants(JID, Room) ->
             lager:error("Unknown database return: ~p~n", [Error]),
             throw(ebadreturn)
     end.
+
+-spec save_room(JID :: jid_text()) -> ok.
+
+save_room(_JID) ->
+    % TODO: save the room.
+    ok.
+
+-spec save_user(JID :: jid_text(), OwnerUser :: jid_text()) -> ok.
+
+save_user(_JID, _OwnerUser) ->
+    % TODO: save the user.
+    ok.
+
+%% -----------------------------------------------------------------------
+%% Internal functions
 
 -spec pg_query(SQL :: binary() | string(), [Params :: any()]) -> [string() | binary()].
 

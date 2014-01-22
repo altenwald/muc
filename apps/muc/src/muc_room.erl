@@ -33,14 +33,12 @@
 %% ------------------------------------------------------------------
 
 create_room(JID, Owner, Nick) ->
-    F = fun() ->
-        muc_room:start_link(JID, Owner, Nick)
-    end,
-    case nprocreg:get_pid(JID, F) of
+    lager:debug("creating JID [~s]~n", [JID]),
+    case nprocreg:get_pid(JID, {muc_room, start_link, [JID,Owner,Nick]}) of
         undefined ->
             lager:error("Cannot create the room ~s~n", [JID]),
             undefined;
-        {ok, PID} ->
+        PID ->
             PID
     end.
 
