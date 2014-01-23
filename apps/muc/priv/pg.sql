@@ -4,11 +4,22 @@ CREATE TABLE rooms (
     name VARCHAR(128) NOT NULL,
     jid VARCHAR(255) NOT NULL,
     description VARCHAR(255) NOT NULL,
+    image VARCHAR(255) NOT NULL,
     change_subject VARCHAR(10) NOT NULL DEFAULT 'owner',
     subject TEXT,
     language CHAR(2) NOT NULL DEFAULT 'en',
     history_size INTEGER NOT NULL DEFAULT 50,
-    public_occupants BOOLEAN NOT NULL DEFAULT TRUE
+    public_occupants BOOLEAN NOT NULL DEFAULT TRUE,
+    public BOOLEAN NOT NULL DEFAULT TRUE,
+    password VARCHAR(64) DEFAULT NULL,
+    max_users INTEGER NOT NULL DEFAULT 30,
+    real_jids VARCHAR(10) NOT NULL DEFAULT 'moderators',
+    members_only BOOLEAN NOT NULL DEFAULT TRUE,
+    moderated_room BOOLEAN NOT NULL DEFAULT FALSE,
+    members_by_default BOOLEAN NOT NULL DEFAULT TRUE,
+    main_owner VARCHAR(255) DEFAULT NULL,
+
+    UNIQUE(name)
 );
 
 CREATE TABLE room_users (
@@ -22,7 +33,7 @@ CREATE TABLE room_users (
     nick VARCHAR(128) NOT NULL,
 
     UNIQUE (rooms_id, member_jid),
-    UNIQUE (nick)
+    UNIQUE (rooms_id, nick)
 );
 
 ALTER TABLE rooms OWNER TO ejabberd;
