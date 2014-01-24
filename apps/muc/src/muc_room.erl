@@ -152,7 +152,7 @@ handle_cast({set_config, From, _Nick, IQ}, #state{
                 "Unknown [~s] param configurated as [~s]~n", [Var,Val]),
                 RInfo
         end, RoomInfo, muc_iq:get_fields(IQ)),
-        %% TODO: update room_info to database
+        {ok,NewRoomInfo} = muc_db:update_room(NewRoomInfo),
         OkResult = exmpp_iq:result(IQ),
         ecomponent:send(OkResult, ?NS_MUC_OWNER, muc, false),
         {noreply, State#state{room_info=NewRoomInfo}}

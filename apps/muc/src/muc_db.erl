@@ -10,6 +10,7 @@
     save_room/3,
     save_user/2,
     get_users/1,
+    update_room/1,
 
     to_role/1,
     to_affiliation/1,
@@ -46,8 +47,14 @@
         "WHERE member_jid = $1 ) ").
 
 -define(GET_ROOM_INFO,
-    "SELECT jid, description, change_subject, subject, language, "
-           "history_size, public_occupants, id "
+    "SELECT id, description, image, change_subject, subject,"
+          " language, history_size, public_occupants,"
+          " public, password, max_users, real_jids,"
+          " members_only, moderated_room, members_by_default,"
+          " allow_private_messages, allow_private_messages_from_visitors,"
+          " allow_query_users, allow_invites, allow_visitors_status,"
+          " allow_visitors_change_nickname, allow_visitors_voice_requests,"
+          " voice_request_min_interval, main_owner, jid "
     "FROM rooms "
     "WHERE name = $1 ").
 
@@ -68,6 +75,18 @@
     "INSERT INTO rooms(name, jid, description, subject) "
     "VALUES( $1, $2, $3, $4 ) "
     "RETURNING id ").
+
+-define(UPDATE_ROOM,
+    "UPDATE rooms "
+    "SET description = $2, image = $3, change_subject = $4, subject = $5,"
+       " language = $6, history_size = $7, public_occupants = $8,"
+       " public = $9, password = $10, max_users = $11, real_jids = $12,"
+       " members_only = $13, moderated_room = $14, members_by_default = $15,"
+       " allow_private_messages = $16, allow_private_messages_from_visitors = $17,"
+       " allow_query_users = $18, allow_invites = $19, allow_visitors_status = $20,"
+       " allow_visitors_change_nickname = $21, allow_visitors_voice_requests = $22,"
+       " voice_request_min_interval = $23, main_owner = $24 "
+    "WHERE id = $1 ").
 
 -define(SAVE_USER,
     "INSERT INTO room_users(rooms_id, member_jid, affiliation, role, nick) "
@@ -105,11 +124,35 @@ get_room_info(JID, Room) ->
 
 get_room_info(Room) ->
     case pg_query(?GET_ROOM_INFO, [Room]) of
-        {ok,_Count,[{RoomJID,Desc,ChSubject,Subject,Lang,Hist,PubOcc,ID}]} ->
+        {ok,_Count,[Row]} ->
             {ok, #room_info{
-                jid=RoomJID, description=Desc, change_subject=ChSubject,
-                subject=Subject, language=Lang, history_size=Hist,
-                public_occupants=PubOcc, id=ID
+                id = element(1, Row),
+                description = string(element(2, Row)),
+                image = string(element(3, Row)),
+                change_subject = 
+                    binary_to_existing_atom(element(4, Row), utf8),
+                subject = string(element(5, Row)),
+                language = element(6, Row),
+                history_size = element(7, Row),
+                public_occupants = element(8, Row),
+                public = element(9, Row),
+                password = string(element(10, Row)),
+                max_users = element(11, Row),
+                real_jids = binary_to_existing_atom(element(12, Row), utf8),
+                members_only = element(13, Row),
+                moderated_room = element(14, Row),
+                members_by_default = element(15, Row),
+                allow_private_messages = element(16, Row),
+                allow_private_messages_from_visitors = 
+                    binary_to_existing_atom(element(17, Row), utf8),
+                allow_query_users = element(18, Row),
+                allow_invites = element(19, Row),
+                allow_visitors_status = element(20, Row),
+                allow_visitors_change_nickname = element(21, Row),
+                allow_visitors_voice_requests = element(22, Row),
+                voice_request_min_interval = element(23, Row),
+                main_owner = string(element(24, Row)),
+                jid = element(25, Row)
             }};
         {ok,0,[]} ->
             {error, notfound};
@@ -189,6 +232,41 @@ get_users(Room) ->
             lager:error("Cannot get users list for room [~s]~n", [Error])
     end.
 
+-spec update_room(RoomInfo :: room_info()) -> 
+    {ok, RoomInfo :: room_info()} | {error, any()}.
+
+update_room(RoomInfo) ->
+    Params = [
+        RoomInfo#room_info.id,
+        RoomInfo#room_info.description,
+        RoomInfo#room_info.image,
+        RoomInfo#room_info.change_subject,
+        RoomInfo#room_info.subject,
+        RoomInfo#room_info.language,
+        RoomInfo#room_info.history_size,
+        RoomInfo#room_info.public_occupants,
+        RoomInfo#room_info.public,
+        RoomInfo#room_info.password,
+        RoomInfo#room_info.max_users,
+        RoomInfo#room_info.real_jids,
+        RoomInfo#room_info.members_only,
+        RoomInfo#room_info.moderated_room,
+        RoomInfo#room_info.members_by_default,
+        RoomInfo#room_info.allow_private_messages,
+        RoomInfo#room_info.allow_private_messages_from_visitors,
+        RoomInfo#room_info.allow_query_users,
+        RoomInfo#room_info.allow_invites,
+        RoomInfo#room_info.allow_visitors_status,
+        RoomInfo#room_info.allow_visitors_change_nickname,
+        RoomInfo#room_info.allow_visitors_voice_requests,
+        RoomInfo#room_info.voice_request_min_interval,
+        RoomInfo#room_info.main_owner
+    ],
+    case pg_query(?UPDATE_ROOM, Params) of
+        {ok,1,_} -> {ok, RoomInfo};
+        {error,Reason} -> {error, Reason}
+    end.
+
 %% -----------------------------------------------------------------------
 %% Internal functions
 
@@ -205,6 +283,11 @@ pg_query(SQL, Params) ->
     end,
     pgsql_pool:return_connection(?POOL, C),
     Result.
+
+-spec string(null | binary()) -> undefined | binary().
+
+string(null) -> undefined;
+string(Any) -> Any.
 
 -spec to_role(Role :: binary()) -> role().
 

@@ -163,13 +163,13 @@ get_room_config(RoomInfo, _RoomUsers) ->
             <<"http://jabber.org/protocol/muc#roomconfig">>},
         {<<"muc#roomconfig_roomname">>, <<"text-single">>, 
             <<"Room title">>, 
-            RoomInfo#room_info.subject},
-        {<<"muc#roomconfig_roomname">>, <<"text-single">>, 
+            string(RoomInfo#room_info.subject)},
+        {<<"muc#roomconfig_roomimage">>, <<"text-single">>, 
             <<"Room image">>, 
-            RoomInfo#room_info.image},
+            string(RoomInfo#room_info.image)},
         {<<"muc#roomconfig_roomdesc">>, <<"text-single">>, 
             <<"Room description">>, 
-            RoomInfo#room_info.description},
+            string(RoomInfo#room_info.description)},
         {<<"muc#roomconfig_persistentroom">>, <<"boolean">>, 
             <<"Make room persistent">>, 
             bool_to_bin(RoomInfo#room_info.persistent)},
@@ -181,7 +181,7 @@ get_room_config(RoomInfo, _RoomUsers) ->
             bool_to_bin(RoomInfo#room_info.public_occupants)},
         {<<"muc#roomconfig_roomsecret">>, <<"text-private">>, 
             <<"Password">>, 
-            RoomInfo#room_info.password},
+            string(RoomInfo#room_info.password)},
         {<<"muc#roomconfig_passwordprotectedroom">>, <<"boolean">>, 
             <<"Make room password protected">>, 
             has_password(RoomInfo#room_info.password)},
@@ -275,6 +275,11 @@ get_fields(IQ) ->
 
 %% -----------------------------------------------------------------------
 %% Internal functions
+
+-spec string(binary() | undefined) -> binary().
+
+string(undefined) -> <<>>;
+string(Any) -> Any.
 
 -spec has_password(undefined | binary()) -> boolean().
 

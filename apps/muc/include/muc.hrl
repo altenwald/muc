@@ -6,16 +6,14 @@
 -define(DEFAULT_MAX_USERS, 30).
 
 -record(room_info,{
-    id :: undefined | integer(),
     jid :: binary(),
+    id :: undefined | integer(),
     description = <<>> :: binary(),
     image :: undefined | binary(),
     change_subject = owner :: change_subject(),
     subject = <<>> :: binary(),
     language = <<"en">> :: binary(),
     history_size = 50 :: non_neg_integer(),
-
-    %% TODO params with functionality not incorporated:
     public_occupants = true :: boolean(),
     persistent = false :: boolean(),
     public = true :: boolean(),
@@ -50,3 +48,5 @@
 }).
 
 -type room_user() :: #room_user{}.
+
+-define(GET_ROOMINFO_DATA(X,Y), (X#room_info.X)).
