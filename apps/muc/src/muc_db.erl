@@ -37,8 +37,14 @@
         "(SELECT id FROM rooms WHERE jid = $1)").
 
 -define(GET_ROOM_INFO_SEC,
-    "SELECT jid, description, change_subject, subject, language, "
-           "history_size, public_occupants, id "
+    "SELECT id, description, image, change_subject, subject,"
+          " language, history_size, public_occupants,"
+          " public, password, max_users, real_jids,"
+          " members_only, moderated_room, members_by_default,"
+          " allow_private_messages, allow_private_messages_from_visitors,"
+          " allow_query_users, allow_invites, allow_visitors_status,"
+          " allow_visitors_change_nickname, allow_visitors_voice_requests,"
+          " voice_request_min_interval, main_owner, jid, room_owners "
     "FROM rooms "
     "WHERE name = $2 "
     "AND id IN ( "
@@ -54,7 +60,7 @@
           " allow_private_messages, allow_private_messages_from_visitors,"
           " allow_query_users, allow_invites, allow_visitors_status,"
           " allow_visitors_change_nickname, allow_visitors_voice_requests,"
-          " voice_request_min_interval, main_owner, jid "
+          " voice_request_min_interval, main_owner, jid, room_owners "
     "FROM rooms "
     "WHERE name = $1 ").
 
@@ -85,7 +91,7 @@
        " allow_private_messages = $16, allow_private_messages_from_visitors = $17,"
        " allow_query_users = $18, allow_invites = $19, allow_visitors_status = $20,"
        " allow_visitors_change_nickname = $21, allow_visitors_voice_requests = $22,"
-       " voice_request_min_interval = $23, main_owner = $24 "
+       " voice_request_min_interval = $23, main_owner = $24, room_owners = $25 "
     "WHERE id = $1 ").
 
 -define(SAVE_USER,
@@ -106,12 +112,8 @@ list_rooms(JID) ->
 
 get_room_info(JID, Room) ->
     case pg_query(?GET_ROOM_INFO_SEC, [JID, Room]) of
-        {ok,_Count,[{RoomJID,Desc,ChSubject,Subject,Lang,Hist,PubOcc,ID}]} ->
-            {ok, #room_info{
-                jid=RoomJID, description=Desc, change_subject=ChSubject,
-                subject=Subject, language=Lang, history_size=Hist,
-                public_occupants=PubOcc, id=ID
-            }};
+        {ok,_Count,[Row]} ->
+            {ok, room_fields_map(Row)};
         {ok,0,[]} ->
             {error, notfound};
         {error,Error} ->
@@ -125,35 +127,7 @@ get_room_info(JID, Room) ->
 get_room_info(Room) ->
     case pg_query(?GET_ROOM_INFO, [Room]) of
         {ok,_Count,[Row]} ->
-            {ok, #room_info{
-                id = element(1, Row),
-                description = string(element(2, Row)),
-                image = string(element(3, Row)),
-                change_subject = 
-                    binary_to_existing_atom(element(4, Row), utf8),
-                subject = string(element(5, Row)),
-                language = element(6, Row),
-                history_size = element(7, Row),
-                public_occupants = element(8, Row),
-                public = element(9, Row),
-                password = string(element(10, Row)),
-                max_users = element(11, Row),
-                real_jids = binary_to_existing_atom(element(12, Row), utf8),
-                members_only = element(13, Row),
-                moderated_room = element(14, Row),
-                members_by_default = element(15, Row),
-                allow_private_messages = element(16, Row),
-                allow_private_messages_from_visitors = 
-                    binary_to_existing_atom(element(17, Row), utf8),
-                allow_query_users = element(18, Row),
-                allow_invites = element(19, Row),
-                allow_visitors_status = element(20, Row),
-                allow_visitors_change_nickname = element(21, Row),
-                allow_visitors_voice_requests = element(22, Row),
-                voice_request_min_interval = element(23, Row),
-                main_owner = string(element(24, Row)),
-                jid = element(25, Row)
-            }};
+            {ok, room_fields_map(Row)};
         {ok,0,[]} ->
             {error, notfound};
         {error,Error} ->
@@ -260,7 +234,14 @@ update_room(RoomInfo) ->
         RoomInfo#room_info.allow_visitors_change_nickname,
         RoomInfo#room_info.allow_visitors_voice_requests,
         RoomInfo#room_info.voice_request_min_interval,
-        RoomInfo#room_info.main_owner
+        RoomInfo#room_info.main_owner,
+        case RoomInfo#room_info.room_owners of
+            [] -> null;
+            [RoomOwner|RoomOwners] ->
+                lists:foldl(fun(RO, Result) ->
+                    <<Result/binary, ";", RO/binary>>
+                end, RoomOwner, RoomOwners)
+        end
     ],
     case pg_query(?UPDATE_ROOM, Params) of
         {ok,1,_} -> {ok, RoomInfo};
@@ -283,6 +264,11 @@ pg_query(SQL, Params) ->
     end,
     pgsql_pool:return_connection(?POOL, C),
     Result.
+
+-spec values(null | binary()) -> [binary()].
+
+values(null) -> [];
+values(Values) -> binary:split(Values, <<";">>, [global]).
 
 -spec string(null | binary()) -> undefined | binary().
 
@@ -314,3 +300,37 @@ from_affiliation(owner) -> <<"owner">>;
 from_affiliation(admin) -> <<"admin">>;
 from_affiliation(member) -> <<"member">>;
 from_affiliation(none) -> <<"none">>.
+
+-spec room_fields_map(Row :: [any()]) -> room_info().
+
+room_fields_map(Row) ->
+    #room_info{
+        id = element(1, Row),
+        description = string(element(2, Row)),
+        image = string(element(3, Row)),
+        change_subject = 
+            binary_to_existing_atom(element(4, Row), utf8),
+        subject = string(element(5, Row)),
+        language = element(6, Row),
+        history_size = element(7, Row),
+        public_occupants = element(8, Row),
+        public = element(9, Row),
+        password = string(element(10, Row)),
+        max_users = element(11, Row),
+        real_jids = binary_to_existing_atom(element(12, Row), utf8),
+        members_only = element(13, Row),
+        moderated_room = element(14, Row),
+        members_by_default = element(15, Row),
+        allow_private_messages = element(16, Row),
+        allow_private_messages_from_visitors = 
+            binary_to_existing_atom(element(17, Row), utf8),
+        allow_query_users = element(18, Row),
+        allow_invites = element(19, Row),
+        allow_visitors_status = element(20, Row),
+        allow_visitors_change_nickname = element(21, Row),
+        allow_visitors_voice_requests = element(22, Row),
+        voice_request_min_interval = element(23, Row),
+        main_owner = string(element(24, Row)),
+        jid = element(25, Row),
+        room_owners = values(element(26, Row))
+    }.

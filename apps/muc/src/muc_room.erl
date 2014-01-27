@@ -145,11 +145,15 @@ handle_cast({set_config, From, _Nick, IQ}, #state{
                 R#room_info{allow_invites=bin_to_bol(Val)};
             ({<<"muc#roomconfig_mainowner">>,Val},R) ->
                 R#room_info{main_owner=Val};
+            ({<<"muc#roomconfig_roomowners">>,Val},R) when is_list(Val) ->
+                R#room_info{room_owners=Val};
+            ({<<"muc#roomconfig_roomowners">>,Val},R) when is_binary(Val) ->
+                R#room_info{room_owners=[Val]};
             %% TODO: include the rest of the params
             ({<<"FROM_TYPE">>,_},RInfo) ->
                 RInfo;
             ({Var,Val},RInfo) -> lager:warning(
-                "Unknown [~s] param configurated as [~s]~n", [Var,Val]),
+                "Unknown [~s] param configurated as [~p]~n", [Var,Val]),
                 RInfo
         end, RoomInfo, muc_iq:get_fields(IQ)),
         {ok,NewRoomInfo} = muc_db:update_room(NewRoomInfo),

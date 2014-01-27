@@ -67,9 +67,10 @@ set_item(Name, JID) ->
     ], []).
 
 -spec set_field(Var :: binary(), Type :: binary() | undefined, 
-    Label :: binary() | undefined, Value :: binary()) -> exmpp_xml:xmlel().
+    Label :: binary() | undefined, 
+    Value :: [binary()] | binary()) -> exmpp_xml:xmlel().
 
-set_field(Var, Type, Label, Value) ->
+set_field(Var, Type, Label, Value) when is_binary(Value) ->
     exmpp_xml:element(undefined, 'field',
         [exmpp_xml:attribute(<<"var">>, Var)] ++ 
         case Type of
@@ -83,7 +84,23 @@ set_field(Var, Type, Label, Value) ->
             exmpp_xml:element(undefined, 'value', [], [
                 exmpp_xml:cdata(Value)
             ])
-        ]).
+        ]);
+
+set_field(Var, Type, Label, Values) when is_list(Values) ->
+    exmpp_xml:element(undefined, 'field',
+        [exmpp_xml:attribute(<<"var">>, Var)] ++ 
+        case Type of
+            undefined -> [];
+            _ -> [exmpp_xml:attribute(<<"type">>, Type)]
+        end ++
+        case Label of
+            undefined -> [];
+            _ -> [exmpp_xml:attribute(<<"label">>, Label)]
+        end, lists:map(fun(Value) ->
+            exmpp_xml:element(undefined, 'value', [], [
+                exmpp_xml:cdata(Value)
+            ])
+        end, Values)).
 
 -type option() :: {Label :: binary(), Value :: binary()}.
 
@@ -184,7 +201,7 @@ get_room_config(RoomInfo, _RoomUsers) ->
             string(RoomInfo#room_info.password)},
         {<<"muc#roomconfig_passwordprotectedroom">>, <<"boolean">>, 
             <<"Make room password protected">>, 
-            has_password(RoomInfo#room_info.password)},
+            bool_to_bin(has_password(RoomInfo#room_info.password))},
         {<<"muc#roomconfig_maxusers">>, <<"list-single">>, 
             <<"Maximum Number of Occupants">>, 
             int_to_bin(RoomInfo#room_info.max_users), [
@@ -242,14 +259,13 @@ get_room_config(RoomInfo, _RoomUsers) ->
             bool_to_bin(RoomInfo#room_info.allow_visitors_voice_requests)},
         {<<"muc#roomconfig_voicerequestmininterval">>, <<"text-single">>,
             <<"Minimum interval between voice requests (in seconds)">>,
-            RoomInfo#room_info.voice_request_min_interval},
+            int_to_bin(RoomInfo#room_info.voice_request_min_interval)},
         {<<"muc#roomconfig_mainowner">>, <<"jid-multi">>,
             <<"Main Owner">>,
             RoomInfo#room_info.main_owner},
-        %% TODO: send all of owners from RoomUsers
         {<<"muc#roomconfig_roomowners">>, <<"jid-multi">>,
             <<"Full List of Room Owner">>,
-            <<>>},
+            RoomInfo#room_info.room_owners},
         %% TODO: send all of white list JIDs from RoomUsers
         {<<"muc#roomconfig_captcha_whitelist">>, <<"jid-multi">>,
             <<"Exclude Jabber IDs from CAPTCHA challenge">>,
@@ -266,7 +282,14 @@ get_fields(IQ) ->
     lists:flatmap(fun
         (#xmlel{name='field'}=Xmlel) ->
             Var = exmpp_xml:get_attribute(Xmlel, <<"var">>, undefined),
-            Val = exmpp_xml:get_path(Xmlel, [{element, 'value'}, cdata]),
+            Val = case exmpp_xml:get_child_elements(Xmlel) of
+                [_ValTag] -> 
+                    exmpp_xml:get_path(Xmlel, [{element, 'value'}, cdata]);
+                ValTags ->
+                    lists:map(fun(ValTag) ->
+                        exmpp_xml:get_cdata(ValTag)
+                    end, ValTags)
+            end,
             [{Var, Val}];
         (Xmlel) ->
             lager:debug("Ignoring ~p~n", [Xmlel]),

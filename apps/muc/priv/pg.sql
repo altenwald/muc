@@ -25,6 +25,7 @@ CREATE TABLE rooms (
     allow_visitors_change_nickname BOOLEAN NOT NULL DEFAULT FALSE,
     allow_visitors_voice_requests BOOLEAN NOT NULL DEFAULT FALSE,
     voice_request_min_interval INTEGER NOT NULL DEFAULT 1800,
+    room_owners TEXT DEFAULT NULL,
     main_owner VARCHAR(255) DEFAULT NULL,
 
     UNIQUE(name)

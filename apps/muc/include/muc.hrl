@@ -31,6 +31,7 @@
     allow_visitors_change_nickname = false :: boolean(),
     allow_visitors_voice_requests = false :: boolean(),
     voice_request_min_interval = 1800 :: non_neg_integer(),
+    room_owners = [] :: [jid_text()],
     main_owner = <<>> :: binary()
 }).
 
