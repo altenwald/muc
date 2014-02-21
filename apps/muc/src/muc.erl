@@ -14,7 +14,7 @@
 
 process_iq(#params{from=From, to={undefined,_,_}, iq=IQ, ns=?NS_DISCO_ITEMS, type="get"}) ->
     FromBin = exmpp_jid:bare_to_binary(exmpp_jid:make(From)),
-    lager:debug("get room list for ~s~n", [FromBin]),
+    lager:debug("get room list for [~s]~n", [FromBin]),
     Rooms = muc_db:list_rooms(FromBin),
     Items = lists:map(fun({Name, JID}) ->
         exmpp_xml:element(undefined, 'item', [
@@ -31,7 +31,7 @@ process_iq(#params{from=From, to={undefined,_,_}, iq=IQ, ns=?NS_DISCO_ITEMS, typ
 
 process_iq(#params{from=From, to={Room,_,undefined}, iq=IQ, ns=?NS_DISCO_INFO, type="get"}) ->
     FromBin = exmpp_jid:bare_to_binary(exmpp_jid:make(From)),
-    lager:debug("get room [~s] info for ~s~n", [Room, FromBin]),
+    lager:debug("get room [~s] info for [~s]~n", [Room, FromBin]),
     %% FIXME: request this information to muc_room
     case muc_db:get_room_info(FromBin, Room) of
     {ok, RoomInfo} ->
@@ -52,7 +52,7 @@ process_iq(#params{from=From, to={Room,_,undefined}, iq=IQ, ns=?NS_DISCO_INFO, t
 
 process_iq(#params{from=From, to={Room,_,_}, iq=IQ, ns=?NS_DISCO_ITEMS, type="get"}) ->
     FromBin = exmpp_jid:bare_to_binary(exmpp_jid:make(From)),
-    lager:debug("get room [~s] occupants info for ~s~n", [Room, FromBin]),
+    lager:debug("get room [~s] occupants info for [~s]~n", [Room, FromBin]),
     Occupants = muc_db:get_occupants(FromBin, Room),
     Items = lists:map(fun({Name, JID}) ->
         muc_iq:set_item(Name, JID)
@@ -66,7 +66,7 @@ process_iq(#params{from=From, to={Room,_,_}, iq=IQ, ns=?NS_DISCO_ITEMS, type="ge
 
 process_iq(#params{from=From, to={Room,_,Nick}, iq=IQ, ns=?NS_DISCO_INFO, type="get"}) ->
     FromBin = exmpp_jid:bare_to_binary(exmpp_jid:make(From)),
-    lager:debug("get room [~s] user [~s] info for ~s~n", [Room, Nick, FromBin]),
+    lager:debug("get room [~s] user [~s] info for [~s]~n", [Room, Nick, FromBin]),
     %% TODO: should return the detailed information about the user?
     Query = exmpp_xml:element(?NS_DISCO_ITEMS, 'query', [], []),
     Result = exmpp_iq:result(IQ, Query),
@@ -78,7 +78,7 @@ process_iq(#params{from=From, to={Room,_,Nick}, iq=IQ, ns=?NS_DISCO_INFO, type="
 process_iq(#params{from=From, to={_,_,Nick}=To, iq=IQ, ns=?NS_MUC_OWNER, type="get"}) ->
     FromBin = exmpp_jid:bare_to_binary(exmpp_jid:make(From)),
     RoomBin = exmpp_jid:bare_to_binary(exmpp_jid:make(To)),
-    lager:debug("get room [~s] user [~s] info for ~s~n", [RoomBin, Nick, FromBin]),
+    lager:debug("get room [~s] user [~s] info for [~s]~n", [RoomBin, Nick, FromBin]),
     muc_room:get_config(RoomBin, FromBin, Nick, IQ),
     ok;
 
@@ -87,7 +87,7 @@ process_iq(#params{from=From, to={_,_,Nick}=To, iq=IQ, ns=?NS_MUC_OWNER, type="g
 process_iq(#params{from=From, to={_,_,Nick}=To, iq=IQ, ns=?NS_MUC_OWNER, type="set"}) ->
     FromBin = exmpp_jid:bare_to_binary(exmpp_jid:make(From)),
     RoomBin = exmpp_jid:bare_to_binary(exmpp_jid:make(To)),
-    lager:debug("get room [~s] user [~s] info for ~s~n", [RoomBin, Nick, FromBin]),
+    lager:debug("setting room [~s] user [~s] info for [~s]~n", [RoomBin, Nick, FromBin]),
     muc_room:set_config(RoomBin, FromBin, Nick, IQ),
     ok;
 
