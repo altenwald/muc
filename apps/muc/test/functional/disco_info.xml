@@ -1,0 +1,106 @@
+<functional-test>
+    <config>
+        <servers>
+            <server name="default" type="active"/>
+        </servers>
+        <jid>muc.altenwald.com</jid>
+        <throttle active="false"/>
+        <processors>
+            <iq xmlns="default" type="mod" data="muc"/>
+            <message type="mod" data="muc"/>
+            <presence type="mod" data="muc"/>
+        </processors>
+        <disco-info active="true">
+            <feature var="http://jabber.org/protocol/disco#info"/>
+            <feature var="http://jabber.org/protocol/disco#items"/>
+            <feature var="http://jabber.org/protocol/muc"/>
+            <feature var="http://jabber.org/protocol/muc#unique"/>
+            <identity 
+                category="conference"
+                type="text"
+                name="Multi-Chat User Component"/>
+        </disco-info>
+    </config>
+
+    <start-code><![CDATA[
+        ok
+    ]]></start-code>
+
+    <mockups>
+        <mockup module="pgsql" function="equery">
+            <code><![CDATA[
+                (_,_,[<<"alice@altenwald.com">>]) -> 
+                    {ok,3,[
+                        {<<"Room 1">>, <<"room1@muc.altenwald.com">>},
+                        {<<"Room 2">>, <<"room2@muc.altenwald.com">>},
+                        {<<"Room 3">>, <<"room3@muc.altenwald.com">>}
+                    ]}
+            ]]></code>
+        </mockup>
+        <mockup module="pgsql_pool" function="get_connection">
+            <code><![CDATA[
+                (_) -> {ok, 0}
+            ]]></code>
+        </mockup>
+        <mockup module="pgsql_pool" function="return_connection">
+            <code><![CDATA[
+                (_,_) -> ok
+            ]]></code>
+        </mockup>
+    </mockups>
+
+    <steps>
+        <step name="request info" type="send">
+            <iq xmlns='jabber:client'
+                id='zb8q41f4'
+                from='alice@altenwald.com/pc'
+                to='muc.altenwald.com'
+                type='get'>
+              <query xmlns='http://jabber.org/protocol/disco#info'/>
+            </iq>
+        </step>
+
+        <step name="receive info about MUC" type="receive">
+            <iq xmlns='jabber:client'
+                id='zb8q41f4'
+                from='muc.altenwald.com'
+                to='alice@altenwald.com/pc'
+                type='result'>
+                <query xmlns='http://jabber.org/protocol/disco#info'>
+                    <feature var="http://jabber.org/protocol/disco#info"/>
+                    <feature var="http://jabber.org/protocol/disco#items"/>
+                    <feature var="http://jabber.org/protocol/muc"/>
+                    <feature var="http://jabber.org/protocol/muc#unique"/>
+                    <identity 
+                        category="conference"
+                        type="text"
+                        name="Multi-Chat User Component"/>
+                </query>
+            </iq>
+        </step>
+
+        <step name="request items - rooms" type="send">
+            <iq xmlns='jabber:client'
+                id='zb8q41f5'
+                from='alice@altenwald.com/pc'
+                to='muc.altenwald.com'
+                type='get'>
+              <query xmlns='http://jabber.org/protocol/disco#items'/>
+            </iq>
+        </step>
+
+        <step name="receive info about rooms" type="receive">
+            <iq xmlns='jabber:client'
+                id='zb8q41f5'
+                from='muc.altenwald.com'
+                to='alice@altenwald.com/pc'
+                type='result'>
+                <query xmlns='http://jabber.org/protocol/disco#items'>
+                    <item jid='room1@muc.altenwald.com' name='Room 1'/>
+                    <item jid='room2@muc.altenwald.com' name='Room 2'/>
+                    <item jid='room3@muc.altenwald.com' name='Room 3'/>
+                </query>
+            </iq>
+        </step>
+    </steps>
+</functional-test>
