@@ -91,6 +91,23 @@ process_iq(#params{from=From, to={_,_,Nick}=To, iq=IQ, ns=?NS_MUC_OWNER, type="s
     muc_room:set_config(RoomBin, FromBin, Nick, IQ),
     ok;
 
+%% Invite new member:
+
+process_iq(#params{from=From, to={_,_,Nick}=To, iq=IQ, ns=?NS_MUC_ADMIN, type="set"}) ->
+    FromBin = exmpp_jid:bare_to_binary(exmpp_jid:make(From)),
+    RoomBin = exmpp_jid:bare_to_binary(exmpp_jid:make(To)),
+    Query = exmpp_xml:get_path(IQ, [{element, 'query'}]),
+    lager:debug("invite user to room [~s] from user [~s] info for [~s]~n", [RoomBin, Nick, FromBin]),
+    lists:foreach(fun
+        (#xmlel{name='item'}=ItemTag) ->
+            InviteJID = exmpp_xml:get_attribute(ItemTag, <<"jid">>, <<>>),
+            Affiliation = exmpp_xml:get_attribute(ItemTag, <<"affiliation">>, <<"member">>),
+            Role = exmpp_xml:get_attribute(ItemTag, <<"role">>, <<"participant">>),
+            muc_room:invite(RoomBin, FromBin, InviteJID, Affiliation, Role);
+        (_Trash) -> ok
+    end, exmpp_xml:get_child_elements(Query)),
+    ok;
+
 %% Bad-request IQ: 
 
 process_iq(#params{iq=IQ}=Params) ->

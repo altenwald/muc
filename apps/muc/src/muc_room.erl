@@ -5,6 +5,7 @@
 -define(SERVER, ?MODULE).
 
 -include_lib("exmpp/include/exmpp.hrl").
+-include_lib("exmpp/include/exmpp_jid.hrl").
 -include("muc.hrl").
 
 -record(state, {
@@ -21,6 +22,7 @@
     create_room/3,
     get_config/4,
     set_config/4,
+    invite/5,
 
     start_link/4
 ]).
@@ -64,6 +66,17 @@ set_config(JID, From, Nick, IQ) ->
             throw(enoroom);
         PID ->
             gen_server:cast(PID, {set_config, From, Nick, IQ})
+    end.
+
+invite(RoomBin, From, InviteJID, Affiliation, Role) ->
+    lager:debug("inviting to room ~s to user ~s~n", [RoomBin, InviteJID]),
+    Invite = exmpp_jid:parse(InviteJID),
+    case nprocreg:get_pid(RoomBin, {muc_room, start_link, [up,RoomBin,From,Invite#jid.node]}) of
+        undefined ->
+            lager:error("Cannot configure the room [~s]~n", [RoomBin]),
+            throw(enoroom);
+        PID ->
+            gen_server:cast(PID, {invite, From, InviteJID, Affiliation, Role})
     end.
 
 start_link(Type, JID, Owner, Nick) ->
@@ -167,6 +180,16 @@ handle_cast({set_config, From, _Nick, IQ}, #state{
         ecomponent:send(ErrorResult, ?NS_MUC_OWNER, muc, false),
         {noreply, State}
     end;
+
+handle_cast({invite, _From, InviteJID, Affiliation, Role}, #state{
+        jid=_JID, room_info=_RoomInfo}=State) ->
+    _InviteUser = #room_user{
+        jid = InviteJID,
+        affiliation = muc_db:to_affiliation(Affiliation),
+        role = muc_db:to_role(Role)
+    },
+    %% TODO: invite user
+    {noreply, State};
 
 handle_cast(_Msg, State) ->
     {noreply, State}.
