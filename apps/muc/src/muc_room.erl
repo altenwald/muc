@@ -24,7 +24,8 @@
     set_config/4,
     invite/5,
 
-    start_link/4
+    start_link/1,
+    start_link/3
 ]).
 
 %% ------------------------------------------------------------------
@@ -40,7 +41,7 @@
 
 create_room(JID, Owner, Nick) ->
     lager:debug("creating JID [~s]~n", [JID]),
-    case nprocreg:get_pid(JID, {muc_room, start_link, [create,JID,Owner,Nick]}) of
+    case forseti:get_pid(JID, [Owner,Nick]) of
         undefined ->
             lager:error("Cannot create the room ~s~n", [JID]),
             undefined;
@@ -50,7 +51,7 @@ create_room(JID, Owner, Nick) ->
 
 get_config(JID, From, Nick, IQ) ->
     lager:debug("getting config for [~s] from [~s]~n", [JID, From]),
-    case nprocreg:get_pid(JID, {muc_room, start_link, [up,JID,From,Nick]}) of
+    case forseti:get_pid(JID) of
         undefined ->
             lager:error("Cannot configure the room [~s]~n", [JID]),
             throw(enoroom);
@@ -60,7 +61,7 @@ get_config(JID, From, Nick, IQ) ->
 
 set_config(JID, From, Nick, IQ) ->
     lager:debug("setting config for [~s] from [~s]~n", [JID, From]),
-    case nprocreg:get_pid(JID, {muc_room, start_link, [up,JID,From,Nick]}) of
+    case forseti:get_pid(JID, [From,Nick]) of
         undefined ->
             lager:error("Cannot configure the room [~s]~n", [JID]),
             throw(enoroom);
@@ -70,8 +71,7 @@ set_config(JID, From, Nick, IQ) ->
 
 invite(RoomBin, From, InviteJID, Affiliation, Role) ->
     lager:debug("inviting to room ~s to user ~s~n", [RoomBin, InviteJID]),
-    Invite = exmpp_jid:parse(InviteJID),
-    case nprocreg:get_pid(RoomBin, {muc_room, start_link, [up,RoomBin,From,Invite#jid.node]}) of
+    case forseti:get_pid(RoomBin) of
         undefined ->
             lager:error("Cannot configure the room [~s]~n", [RoomBin]),
             throw(enoroom);
@@ -79,14 +79,17 @@ invite(RoomBin, From, InviteJID, Affiliation, Role) ->
             gen_server:cast(PID, {invite, From, InviteJID, Affiliation, Role})
     end.
 
-start_link(Type, JID, Owner, Nick) ->
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [Type,JID,Owner,Nick], []).
+start_link(JID) ->
+    gen_server:start_link({local, ?SERVER}, ?MODULE, [JID], []).
+
+start_link(JID, Owner, Nick) ->
+    gen_server:start_link({local, ?SERVER}, ?MODULE, [JID,Owner,Nick], []).
 
 %% ------------------------------------------------------------------
 %% gen_server Function Definitions
 %% ------------------------------------------------------------------
 
-init([up,JIDbin,_User,_Nick]) ->
+init([JIDbin]) ->
     JID = exmpp_jid:parse(JIDbin),
     {ok, RoomInfo} = muc_db:get_room_info(exmpp_jid:node(JID)),
     {ok, RoomUsers} = muc_db:get_users(JIDbin),
@@ -96,7 +99,7 @@ init([up,JIDbin,_User,_Nick]) ->
         users = RoomUsers
     }};
 
-init([create,JIDbin,Owner,Nick]) ->
+init([JIDbin,Owner,Nick]) ->
     JID = exmpp_jid:parse(JIDbin),
     OwnerUser = #room_user{
         jid = Owner,

@@ -22,12 +22,8 @@
         </disco-info>
     </config>
 
-    <start-code><![CDATA[
-        ok
-    ]]></start-code>
-
     <mockups>
-        <mockup module="pgsql" function="equery">
+        <mockup module="dbi" function="do_query">
             <code><![CDATA[
                 (_,_,[<<"alice@altenwald.com">>]) -> 
                     {ok,3,[
@@ -35,16 +31,6 @@
                         {<<"Room 2">>, <<"room2@muc.altenwald.com">>},
                         {<<"Room 3">>, <<"room3@muc.altenwald.com">>}
                     ]}
-            ]]></code>
-        </mockup>
-        <mockup module="pgsql_pool" function="get_connection">
-            <code><![CDATA[
-                (_) -> {ok, 0}
-            ]]></code>
-        </mockup>
-        <mockup module="pgsql_pool" function="return_connection">
-            <code><![CDATA[
-                (_,_) -> ok
             ]]></code>
         </mockup>
     </mockups>

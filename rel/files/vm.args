@@ -1,5 +1,5 @@
 ## Name of the node
--name muc@127.0.0.1
+-sname muc@localhost
 
 ## Cookie for distributed erlang
 -setcookie muc
